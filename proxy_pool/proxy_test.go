@@ -50,7 +50,7 @@ func Test_Proxy(t *testing.T) {
 			resp, err := cli.Get(getIp)
 			end := time.Now()
 			assert.NoError(t, err, "请求错误,使用代理："+proxy.Host+"地址："+proxy.Addr)
-			proxy.Delay = end.Sub(begin)
+			proxy.Delay = end.Sub(begin).Milliseconds()
 			defer resp.Body.Close()
 			body, err := io.ReadAll(resp.Body)
 			assert.NoError(t, err)
@@ -63,3 +63,4 @@ func Test_Proxy(t *testing.T) {
 	}
 	wg.Wait()
 }
+ 
