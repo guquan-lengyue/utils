@@ -2,49 +2,78 @@ package proxypool
 
 import (
 	"io"
+	"log"
 	"net/http"
-	"regexp"
-	"strconv"
 	"time"
+
+	"github.com/bytedance/sonic"
 )
 
-const supportorUrl = "http://api.89ip.cn/tqdl.html?api=1&num=60&port=&address=&isp="
+// 稻壳代理 https://www.docip.net/free
+const DocipUrl = "https://www2.docip.net/data/free.json"
 
-var proxyReg = regexp.MustCompile(`(.*?):(\d+)<br>`)
-
-type proxyPool struct {
-	host string
-	port int
+type docipProxyResp struct {
+	Time uint `json:"time"`
+	Data []struct {
+		Ip        string `json:"ip"`
+		Addr      string `json:"addr"`
+		ProxyType string `json:"proxy_type"`
+	}
 }
 
-func getProxyHost() ([]*proxyPool, error) {
-	req, err := http.NewRequest("GET", supportorUrl, nil)
+func DocipProxy() []*Proxy {
+	request, err := httpRequest(DocipUrl, "GET")
+	if err != nil {
+		log.Println(err.Error())
+		return nil
+	}
+	cli := http.Client{Timeout: 60 * time.Second}
+	resp, err := cli.Do(request)
+	if err != nil {
+		return nil
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Println(err)
+	}
+	r := docipProxyResp{}
+	err = sonic.Unmarshal(body, &r)
+	if err != nil {
+		log.Println(err)
+		return nil
+	}
+	updateTime := time.Unix(int64(r.Time), 0)
+	rst := make([]*Proxy, 0, len(r.Data))
+	for _, p := range r.Data {
+		var pt ProxyType = HTTP
+		if p.ProxyType == "1" {
+			pt = HTTPS
+		}
+		rp := &Proxy{
+			Host:   p.Ip,
+			Type:   pt,
+			Update: updateTime,
+			Addr:   p.Addr,
+		}
+		rst = append(rst, rp)
+	}
+	return rst
+}
+
+func httpRequest(url string, method string, headers ...map[string]string) (*http.Request, error) {
+	req, err := http.NewRequest(method, url, nil)
 	req.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0")
 	req.Header.Add("Accept", "*/*")
 	req.Header.Add("Connection", "keep-alive")
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	if err != nil {
-		return nil, err
-	}
-	cli := &http.Client{Timeout: 60 * time.Second}
-	resp, err := cli.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	proxy := proxyReg.FindAllSubmatch(body, -1)
-	rst := make([]*proxyPool, 0, len(proxy))
-	for i := 0; i < len(proxy); i++ {
-		p, err := strconv.Atoi(string(proxy[i][2]))
-		if err != nil {
-			continue
+	for _, header := range headers {
+		for k, v := range header {
+			req.Header.Add(k, v)
 		}
-		rst = append(rst, &proxyPool{host: string(proxy[i][1]), port: p})
 	}
-	return rst, nil
+	if err != nil {
+		return nil, err
+	}
+	return req, nil
 }
