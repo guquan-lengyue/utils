@@ -14,5 +14,5 @@ type Proxy struct {
 	Addr   string    // ip地址位置
 	Type   ProxyType // 协议
 	Update time.Time // 更新时间
-	Delay  int64      // 目标延迟
+	Delay  int64     // 目标延迟
 }

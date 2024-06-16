@@ -9,8 +9,8 @@ import (
 	"github.com/bytedance/sonic"
 )
 
-// 稻壳代理 https://www.docip.net/free
-const DocipUrl = "https://www2.docip.net/data/free.json"
+// DocipUrl 稻壳代理 https://www.docip.net/free
+const DocipUrl = "https://www.docip.net/data/free.json"
 
 type docipProxyResp struct {
 	Time uint `json:"time"`
@@ -46,7 +46,7 @@ func DocipProxy() []*Proxy {
 	updateTime := time.Unix(int64(r.Time), 0)
 	rst := make([]*Proxy, 0, len(r.Data))
 	for _, p := range r.Data {
-		var pt ProxyType = HTTP
+		var pt = HTTP
 		if p.ProxyType == "1" {
 			pt = HTTPS
 		}
