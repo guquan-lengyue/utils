@@ -9,6 +9,10 @@ import (
 	"github.com/bytedance/sonic"
 )
 
+func init() {
+	registProxyPool(DocipProxy)
+}
+
 // DocipUrl 稻壳代理 https://www.docip.net/free
 const DocipUrl = "https://www.docip.net/data/free.json"
 

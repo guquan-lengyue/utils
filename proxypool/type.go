@@ -1,6 +1,9 @@
 package proxypool
 
-import "time"
+import (
+	"net/url"
+	"time"
+)
 
 type ProxyType uint
 
@@ -15,4 +18,17 @@ type Proxy struct {
 	Type   ProxyType // 协议
 	Update time.Time // 更新时间
 	Delay  int64     // 目标延迟
+}
+
+func (p *Proxy) getUrl() (*url.URL, error) {
+	protocol := "http"
+	if p.Type == HTTPS {
+		protocol = "https"
+	}
+	return url.Parse(protocol + "://" + p.Host)
+}
+
+type ProxyPool interface {
+	Proxy() (*url.URL, error)
+	FlashDelay(targetHostOptions ...string)
 }
